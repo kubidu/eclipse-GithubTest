@@ -105,7 +105,7 @@ Hello, I'm PanGyo :wave:
 ![](https://velog.velcdn.com/images/spg9468/post/ea382928-c55e-4d7f-ad4a-6d4d3021e2c7/image.png)
 
 
-### 3-2 Springboot Controller
+### 3-2 프로젝트에서 활용한 것들들
 
 #### ✅ &nbsp; Mybatis-Config
 - ** SqlSessionFactory 생성 시 Reference로 DataSource Bean 수정 및 생성**
@@ -155,138 +155,158 @@ public class MyBatisConfig {
 }
 ```
 
-#### ✅ &nbsp; Interceptor-Config
-- ** 로그인 안되어있을 때 Interceptor로 접근 금지 URL 관리 **
+#### ✅ &nbsp; pay
+- ** 선택한 결제방식으로 결제창이 뜰 수 있도록 value값을 pg 이름으로 설정 **
 ```
-package com.web.config;
-
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import com.web.session.SessionCheckInterceptor;
-
-@Configuration
-public class WebConfig implements WebMvcConfigurer {
-
-	@Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new SessionCheckInterceptor())
-                .order(2)
-                .addPathPatterns("/memberJoinForm", "/loginForm", "/createparty",
-                                 "/memberUpdate", "/memberUpdateForm", "/memberUpdateNo",
-                                 "/memberUpdateResult", "/reviewInsert", "/admin",
-                                 "/getmypage", "/groupInsert", "/groupJoinForm",
-                                 "/groupRegistrationForm", "/imageban", "/mygrouplist",
-                                 "/MyKingList", "/PartyList", "/partyUpdate",
-                                 "/youtubePartyList", "/findparty", "/partydetail",
-                                 "/payinfo", "/reviewContent", "/reviewForm" ) // 접근 금지 url
-                .excludePathPatterns("/resources/**", "/**/*.ico", "/error", "/login", "/loginResult",
-                					 "/userSearch" ); // 예외 url 
-    }
-}
-
-```
-- ** HandlerInterceptor 부분 **
-```
-package com.web.session;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.springframework.web.servlet.HandlerInterceptor;
-
-import lombok.extern.slf4j.Slf4j;
-
-public class SessionCheckInterceptor implements HandlerInterceptor {
-
-    @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse
-            response, Object handler) throws Exception {
-		
-        //Session Check - Session X
-        if(request.getSession().getAttribute(MemberSession.LOGIN) == null){
-        	
-            // 세션이 없을 시, login으로 Redirect
-            response.sendRedirect("/login");
-            return false;
-        }
-		
-        // Session O
-        return true;
-
-    };
-}
+<table id="mw">
+	   		<tr>
+	   			<td style="width: 300px;font-weight: bold; font-size: 20px;">결제 방법</td>
+	   		</tr>
+	   		<tr>
+	   			<td style="">
+	   				<img src="resources/assets/img/tosspay.png" width="140" height="50"/> &nbsp; <input type="radio" name="pg" value="tosspayments" checked/> <label>toss</label><br/>
+	   				<img src="resources/assets/img/kakaopay.png" width="140" height="50"/> &nbsp; <input type="radio" name="pg" value="kakaopay"/> <label>kakao</label><br/>
+	   				<img src="resources/assets/img/payco.png" width="140" height="50"/> &nbsp; <input type="radio" name="pg" value="payco"/> <label>payco</label><br/>
+ 	   				<p id="number">합계 :&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<fmt:formatNumber type="number" maxFractionDigits="0" value="${(vo.price / vo.peoplecnt_max)*1.1 }" />&nbsp;원</p>
+	   			</td>
+	   			<td>
+	   			</td>
+	   		</tr>
+ 	   			<tr>
+	   		</tr>
+	   	</table>
+	  
+	   	</div>
+	
+	   	<br/>
+	   	<br/>
+	   	<div class="input_area">
+		   	<input type="button" id="pay" value="결 제" onclick="requestPay(${(vo.price / vo.peoplecnt_max)*1.1 },'${vo.service }','${mv.name }','${mv.email }','${mv.tel }','${mv.addr }',${vo.seq},'${mv.email}')"/> &nbsp; &nbsp; &nbsp;
+		   	<input type="button" id="list" onclick="location.href='/'" style="cursor: pointer;" value="목 록" />
+	   	</div>
 
 ```
-
-### 3-3 &nbsp; JSoup 데이터 크롤링
-
-#### ✅ &nbsp; TopService
+- ** javascript 부분 **
+```
+function requestPay(price,service,name,email,tel,addr,seq,email) {
+	  var page = document.querySelector('input[name="pg"]:checked').value;
+      var IMP = window.IMP;
+      IMP.init("내 가맹점코드");
+      IMP.request_pay(
+        {
+      	  	pg: page, // 반드시 "tosspayments"임을 명시해주세요.
+      	    merchant_uid: "",
+      	    name: service,
+      	    pay_method: "card",
+      	    escrow: false,
+      	    amount: Math.round(price),
+      	    tax_free: 2,
+      	    buyer_name: name,
+      	    buyer_email: email,
+      	    buyer_tel: tel,
+      	    buyer_addr: addr,
+      	    buyer_postcode: "04783",
+      	    notice_url: "https://helloworld.com/api/v1/payments/notice",
+      	    confirm_url: "https://helloworld.com/api/v1/payments/confirm",
+      	    currency: "KRW",
+      	    locale: "ko",
+      	    custom_data: { userId: 30930 },
+      	    display: { card_quota: [0, 6] },
+      	    appCard: false,
+      	    useCardPoint: true,
+      	    bypass: {
+      	      tosspayments: {
+      	        useInternationalCardOnly: true, // 영어 결제창 활성화
+      	      },
+      	    },
+        },
+        function (rsp) {
+          if(rsp.success){
+			  jQuery.ajax({
+			    url: "http://site.oyes.o-r.kr/paywork?seq="+ seq + "&price="+Math.round(price)+"&email="+ email, 
+			    method: "POST",
+			    headers: { "Content-Type": "application/json; charset=utf-8" },
+			    data: JSON.stringify ({ 
+					imp_uid: rsp.imp_uid, // 결제 고유 번호
+					merchant_uid : rsp.merchant_uid, // 주문번호 
+					status : rsp.status // 결제방법
+			    })
+			  });
+			  location.href='/';
+          } else {
+          	console.log(rsp);
+          	alert('결제 실패,,,');
+          }
+        });
+  	}
 
 ```
-package com.web.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+### 3-3 &nbsp; Mali 의존성 추가 후 사용
 
-import javax.annotation.PostConstruct;
+#### ✅ &nbsp; MailService
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+```
+import java.io.UnsupportedEncodingException;
+
+import javax.mail.MessagingException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
-import com.web.vo.Top;
+import lombok.RequiredArgsConstructor;
 
 @Service
-public class TopService {
-	private static String Top_Netflix_URL = "https://www.netflix.com/tudum/top10/south-korea";
-	private static String Top_WhaCha_URL ="https://pedia.watcha.com/";
-    @PostConstruct
-    public List<Top> getTopDatas() throws IOException {
-        List<Top> TopList = new ArrayList<>();
-        Document document = Jsoup.connect(Top_Netflix_URL).get();
-
-        Elements contents = document.select("section ul div");
-        for(Element content : contents) {
-        	Top top = Top.builder()
-        			.image(content.select("picture source").attr("abs:srcset"))
-        			.subject(content.select("b").text())
-        			.url(content.select("a").attr("abs:href"))
-        			.build();
-        	if(top.getImage() != "" && top.getSubject() != "" && top.getUrl() != "") {
-            	top.setSubject(top.getSubject().substring(0,top.getSubject().length()-3));
-        		TopList.add(top);
-        	}
-        }
-        return TopList;
-    }
-    
-    @PostConstruct
-    public List<Top> getTopWhacha() throws IOException {
-        List<Top> TopList = new ArrayList<>();
-        Document document = Jsoup.connect(Top_WhaCha_URL).get();
-        Elements contents = document.select("section div ul li");
-        for(Element content : contents) {
-        	Top top = Top.builder()
-        			.image(content.select("img").attr("abs:src"))
-        			.subject(content.select("a").text())
-        			.url(content.select("a").attr("abs:href"))
-        			.build();
-        	if(top.getImage() != "" && top.getSubject() != "" && top.getUrl() != "") {
-        		TopList.add(top);
-        	}
-        }
-        return TopList.subList(0, 10);
-    }
+@RequiredArgsConstructor
+public class MailService {
+   
+   private final JavaMailSender javamailSender;
+   private static final String senderEmail = "oy1666919@gmail.com";
+   private static int number;
+   
+   public static void createNumber() {
+      number = (int)(Math.random() * (90000)) + 100000;
+   }
+   
+   public MimeMessage CreateMail(String mail) throws UnsupportedEncodingException {
+      createNumber();
+        MimeMessage message = javamailSender.createMimeMessage();
+      
+      try {
+         message.setFrom(new InternetAddress(senderEmail, "OYES"));
+         message.setRecipients(MimeMessage.RecipientType.TO, mail);
+         message.setSubject("이메일 인증");
+         String body = "";
+         body += "<h3>" + "요청하신 인증 번호입니다" + "</h3>";
+         body += "<h1>" + number + "</h1>";
+         message.setText(body,"UTF-8", "html");
+      } catch (MessagingException e) {
+         e.printStackTrace();
+      }
+      
+      return message;
+      
+   }
+   
+   public int sendMail(String mail) throws UnsupportedEncodingException {
+      
+      MimeMessage message = CreateMail(mail);
+      
+      javamailSender.send(message);
+      
+      return number;
+   }
+   
 }
 
 ```
 ---
 # 4. &nbsp; 결론
-#### &nbsp; OTT서비스에 대한 수요가 날로 늘어나고 있으며, 이에 따른 공유 서비스들도 증가하고 있다. 그러나 수요 증가 추세에도 불구하고 아직까지 사람들이 많이 이용하고 있는 공유 서비스는 없는 편이다. 따라서 본 프로젝트는 OTT서비스 파티 관리 부분을 개선하여 사용자에게 보다 나은 서비스를 제공하고자 하였다.
+#### &nbsp; 첫 프로젝트인만큼 방황도 많이 하고 어려운 부분들이 많았다. 이런 점들을 팀원들과의 소통을 통해서 해소하며
+#### &nbsp;프로젝트는 혼자가 아니 다 같이 도우며 알려주고 의견 공유를 많이 해야 더 좋고 질높은 프로그램이 나올 수 있다는 것을 알게 되었다.
+#### &nbsp; 넷플릭스, 유튜브와 같은 대형 플렛폼을 이용하는만큼 사람들은 OTT 서비스라는 개념에는 아직 생소하다고 생각한다.
+#### &nbsp; 이번 프로젝트에서 만든것을 바탕으로 사람들이 그 편리성을 이해하고 많이 사용하면 좋겠다는 생각을 했다.
 
 
