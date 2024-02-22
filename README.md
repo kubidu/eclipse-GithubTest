@@ -14,7 +14,7 @@ Here are some ideas to get you started:
 - ⚡ Fun fact: ...
 -->
 <div align="center">
-Hello, I'm PanGyo :wave:
+Hello, I'm ChanYoung :wave:
 </div>
 
 
